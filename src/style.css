@@ -1,0 +1,51 @@
+*,
+html,
+body {
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+:root {
+  --color-50: oklch(98.5% 0 0);
+  --color-100: oklch(97% 0.001 106.424);
+  --color-200: oklch(92.3% 0.003 48.717);
+  --color-300: oklch(86.9% 0.005 56.366);
+  --color-400: oklch(70.9% 0.01 56.259);
+  --color-500: oklch(55.3% 0.013 58.071);
+  --color-600: oklch(55.3% 0.013 58.071);
+  --color-700: oklch(37.4% 0.01 67.558);
+  --color-800: oklch(26.8% 0.007 34.298);
+  --color-900: oklch(21.6% 0.006 56.043);
+  --color-950: oklch(14.7% 0.004 49.25);
+}
+
+body {
+  background: var(--color-900);
+  font-family: 'Century Ghotic', sans-serif;
+}
+
+.input_group {
+  display: grid;
+}
+
+.input_group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.input_group input {
+  border: 1px solid var(--color-700);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  background: var(--color-800);
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
