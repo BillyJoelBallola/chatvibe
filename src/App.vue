@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-
-import { auth } from './lib/firebase'
-import type { User } from 'firebase/auth'
 import BaseLayout from './layout/BaseLayout.vue'
-import Login from './views/Login.vue'
+import { useRoute } from 'vue-router'
 
-const loggedUser = ref<User | null>()
-
-auth.onAuthStateChanged((user) => {
-  loggedUser.value = user
-})
+const route = useRoute()
 </script>
 
 <template>
-  <Login v-if="!loggedUser" />
-  <BaseLayout v-else>
+  <template v-if="route.meta.layout !== 'none'">
+    <BaseLayout>
+      <router-view />
+    </BaseLayout>
+  </template>
+  <template v-else>
     <router-view />
-  </BaseLayout>
+  </template>
 </template>

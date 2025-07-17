@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const roomName = ref<string>('')
 
 const props = defineProps<{
   isModalOpen: boolean
+  isCreating: boolean
   createChatRoom: (name: string) => void
 }>()
+
+watch(
+  () => props.isModalOpen,
+  () => {
+    if (props.isModalOpen) {
+      roomName.value = ''
+    }
+  },
+)
 
 const emits = defineEmits<{
   (event: 'toggleModal'): void
@@ -27,7 +37,7 @@ const emits = defineEmits<{
           <label>Room's Name</label>
           <input v-model="roomName" type="text" />
         </div>
-        <button>Create</button>
+        <button :disabled="isCreating">Create</button>
       </form>
     </div>
   </div>
@@ -39,6 +49,7 @@ const emits = defineEmits<{
   padding: 0.5rem 1rem;
   border-radius: 1rem;
   transition: all 150ms ease;
+  font-weight: 600;
 }
 
 .create_btn:hover {
@@ -60,7 +71,19 @@ const emits = defineEmits<{
   background: var(--color-900);
   padding: 1rem;
   border-radius: 0.5rem;
-  width: 30%;
+  width: 90%;
+}
+
+@media (min-width: 720px) {
+  .modal_box {
+    width: 60%;
+  }
+}
+
+@media (min-width: 1020px) {
+  .modal_box {
+    width: 30%;
+  }
 }
 
 .modal_box form {

@@ -1,23 +1,28 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { auth, firestore } from '../lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot, addDoc } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore'
+import type { User } from 'firebase/auth'
 
 const messages = ref<any>([])
-const messageText = ref('')
+const messageText = ref<string>('')
+const isSending = ref<boolean>(false)
 const roomId = ref<string>('')
-const user = ref<any>(null)
+const user = ref<User | null>(null)
+const messagesContainer = ref<HTMLElement | null>(null)
 
 const route = useRoute()
 
 const sendMessage = async () => {
   if (messageText.value && roomId.value) {
     try {
+      isSending.value = true
       const newMessage = {
         text: messageText.value,
-        username: user.value?.displayName || user.value?.email || 'Anonymous',
+        username: user.value?.displayName || user.value?.email?.split('@')[0],
+        email: user.value?.email,
         timestamp: serverTimestamp(),
       }
 
@@ -26,8 +31,24 @@ const sendMessage = async () => {
       messageText.value = ''
     } catch (error) {
       console.error('Error sending message: ', error)
+    } finally {
+      isSending.value = false
     }
   }
+}
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      const lastMessage = messagesContainer.value.lastElementChild
+      if (lastMessage) {
+        lastMessage.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        })
+      }
+    }
+  })
 }
 
 const fetchMessages = () => {
@@ -38,6 +59,7 @@ const fetchMessages = () => {
     onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         messages.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        scrollToBottom()
       }
     })
   }
@@ -49,31 +71,36 @@ onMounted(() => {
     user.value = currentUser
   })
   fetchMessages()
+  scrollToBottom()
+})
+
+watch(messages, () => {
+  scrollToBottom()
 })
 </script>
 
 <template>
   <div class="chat_container">
-    <div class="messages">
+    <div class="messages" ref="messagesContainer">
       <div
         v-if="messages.length !== 0"
         v-for="message in messages"
         :key="message.id"
         class="message"
         :class="{
-          right: message.username !== user?.email,
-          left: message.username === user?.email,
+          align_right: message.email !== user?.email,
+          align_left: message.email === user?.email,
         }"
       >
         <div class="message_content">
-          <small v-if="message.username !== user?.email">{{ message.username }}</small>
+          <small v-if="message.email !== user?.email">{{ message.username }}</small>
           <div
             :class="{
-              light_gray: message.username === user?.email,
-              dark_gray: message.username !== user?.email,
+              light_gray: message.email === user?.email,
+              dark_gray: message.email !== user?.email,
             }"
           >
-            <p v-html="message.text"></p>
+            <p>{{ message.text }}</p>
           </div>
         </div>
         <!-- <small>{{ message.timestamp }}</small> -->
@@ -92,7 +119,7 @@ onMounted(() => {
           placeholder="Type a message..."
           aria-label="Message input"
         />
-        <button type="submit">
+        <button :disabled="isSending" type="submit">
           <img src="/send-horizontal.svg" alt="send" />
         </button>
       </form>
@@ -106,20 +133,19 @@ onMounted(() => {
 <style scoped>
 .chat_container {
   padding-top: 4rem;
+  padding-bottom: 10rem;
   color: var(--color-50);
 
   position: relative;
   display: flex;
   flex-direction: column;
 
-  height: 100dvh;
+  min-height: 100dvh;
 }
 
 .messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding-bottom: 10rem;
-  margin-bottom: 4rem;
 
   display: flex;
   flex-direction: column;
@@ -130,7 +156,8 @@ onMounted(() => {
   display: grid;
   place-items: center;
   font-size: clamp(1.2rem, 4vw, 2rem);
-  height: 100%;
+  height: 60dvh;
+  padding-top: 10rem;
 }
 
 .message_content small {
@@ -142,16 +169,16 @@ onMounted(() => {
   border-radius: 1.5rem;
 }
 
-.right,
-.left {
+.align_right,
+.align_left {
   max-width: 70%;
 }
 
-.right {
+.align_right {
   align-self: flex-start;
 }
 
-.left {
+.align_left {
   align-self: flex-end;
 }
 
@@ -164,10 +191,24 @@ onMounted(() => {
 }
 
 .form_container {
-  position: absolute;
-  width: 100%;
+  position: fixed;
+  width: 90%;
   bottom: 0;
   text-align: center;
+  background: var(--color-900);
+  border-radius: 1.5rem 1.5rem 0 0;
+}
+
+@media (min-width: 720px) {
+  .form_container {
+    width: 70%;
+  }
+}
+
+@media (min-width: 1020px) {
+  .form_container {
+    width: 50%;
+  }
 }
 
 .form_container div {
@@ -182,6 +223,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border: 1px solid var(--color-700);
 }
 
 .form_container form textarea {

@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { watch, ref, onMounted } from 'vue'
 import { auth, firestore } from '../lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
+import { useUserStore } from '@/lib/store'
 
 const roomId = ref<string | null>(null)
-const roomName = ref<string | null>(null)
+const roomInfo = ref<{ name: string; email: string } | null>(null)
 
 const route = useRoute()
+const router = useRouter()
+const store = useUserStore()
 
-function signOut() {
+function logout() {
   auth
     .signOut()
     .then(() => {
-      console.log('User signed out successfully!')
+      store.removeUser()
+      router.replace('/login')
     })
     .catch((error) => {
       console.error('Error signing out: ', error)
@@ -26,13 +30,12 @@ async function fetchRoomName(roomId: string) {
     const roomSnapshot = await getDoc(roomRef)
 
     if (roomSnapshot.exists()) {
-      roomName.value = roomSnapshot.data()?.name || 'Room Name Not Found'
+      roomInfo.value = { name: roomSnapshot.data()?.name, email: roomSnapshot.data()?.owner.email }
     } else {
-      roomName.value = 'Room Not Found'
+      roomInfo.value = null
     }
   } catch (error) {
     console.error('Error fetching room data:', error)
-    roomName.value = 'Error Fetching Room'
   }
 }
 
@@ -44,7 +47,7 @@ watch(
       fetchRoomName(roomId.value)
     } else {
       roomId.value = null
-      roomName.value = null
+      roomInfo.value = null
     }
   },
   { immediate: true },
@@ -64,11 +67,23 @@ onMounted(() => {
     <div class="logo_container">
       <RouterLink class="logo" to="/">
         <img src="/chatvibe_logo.png" alt="logo_image" />
-        ChatVibe
+        <span>ChatVibe</span>
       </RouterLink>
-      <span v-if="roomName">| {{ roomName }}</span>
+
+      <div v-if="roomInfo" class="room_info">
+        <div class="horizontal_line" />
+        <div class="room_info_text">
+          <span>{{ roomInfo.name }}</span>
+          <small v-if="store.user.email === roomInfo.email">Owned</small>
+        </div>
+      </div>
     </div>
-    <button class="signout_btn" @click="signOut()">Sign Out</button>
+    <div class="right_container">
+      <span class="user_info" v-if="store.user">{{
+        store.user.displayName || store.user.email
+      }}</span>
+      <button class="signout_btn" @click="logout()">Logout</button>
+    </div>
   </header>
 </template>
 
@@ -87,6 +102,31 @@ header {
   color: var(--color-50);
 }
 
+.room_info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.room_info .room_info_text {
+  display: grid;
+}
+
+.room_info .room_info_text span {
+  font-weight: 600;
+}
+
+.room_info .room_info_text small {
+  margin-top: -5px;
+  font-size: 0.7rem;
+}
+
+.horizontal_line {
+  height: 1.5rem;
+  width: 1px;
+  background: var(--color-50);
+}
+
 .logo_container {
   display: flex;
   align-items: center;
@@ -101,15 +141,35 @@ header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--color-50);
+}
 
+.logo span {
   font-weight: 600;
   font-size: 1.2rem;
-  color: var(--color-50);
+  display: none;
+}
+
+@media (min-width: 720px) {
+  .logo span {
+    display: block;
+  }
 }
 
 .logo img {
   width: 1.5rem;
   aspect-ratio: auto;
+}
+
+.right_container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.right_container .user_info {
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .signout_btn {
