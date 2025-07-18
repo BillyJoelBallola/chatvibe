@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { watch, ref, onMounted } from 'vue'
+import { watch, ref, onMounted, computed } from 'vue'
 import { auth, firestore } from '../lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { useUserStore } from '@/lib/store'
@@ -30,7 +30,7 @@ async function fetchRoomName(roomId: string) {
     const roomSnapshot = await getDoc(roomRef)
 
     if (roomSnapshot.exists()) {
-      roomInfo.value = { name: roomSnapshot.data()?.name, email: roomSnapshot.data()?.owner.email }
+      roomInfo.value = { name: roomSnapshot.data()?.name, email: roomSnapshot.data()?.admin.email }
     } else {
       roomInfo.value = null
     }

@@ -1,34 +1,47 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { auth } from '@/lib/firebase'
+import { auth, firestore } from '@/lib/firebase'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/lib/store'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth'
+import { addDoc, collection } from 'firebase/firestore'
+import { toast } from 'vue3-toastify'
 
 const displayName = ref<string>('')
 const email = ref<string>('')
 const confirmPassword = ref<string>('')
 const password = ref<string>('')
 
-const store = useUserStore()
 const router = useRouter()
 
 const register = async () => {
-  try {
-    if (password.value !== confirmPassword.value) {
-      return alert('Incorrect confirm password')
-    }
+  if (displayName.value.length <= 5) {
+    return toast.error('Display name must be 6 characters or more')
+  }
 
+  if (password.value !== confirmPassword.value) {
+    return toast.error('Incorrect confirm password')
+  }
+
+  try {
     const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
 
     await updateProfile(userCredential.user, {
       displayName: displayName.value,
     })
 
-    store.setUser(userCredential)
+    await addDoc(collection(firestore, 'users'), {
+      id: userCredential.user.uid,
+      displayName: displayName.value,
+      email: email.value,
+    })
+
+    await signOut(auth)
+
+    toast.success('Account registered successfully!')
     router.push('/login')
   } catch (error: any) {
-    console.error('Error registering user:', error.message)
+    toast.error('An error occurred. Please try again')
   }
 }
 </script>

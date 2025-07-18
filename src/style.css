@@ -21,6 +21,8 @@ body {
   --color-800: oklch(26.8% 0.007 34.298);
   --color-900: oklch(21.6% 0.006 56.043);
   --color-950: oklch(14.7% 0.004 49.25);
+
+  --color-error: oklch(63.7% 0.237 25.331);
 }
 
 body {
@@ -45,7 +47,16 @@ body {
   color: inherit;
 }
 
+.input_group .error_message {
+  font-size: 0.8rem;
+  color: var(--color-error);
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+.Toastify__toast {
+  font-size: 0.9rem;
 }

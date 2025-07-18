@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
 import { firestore } from '../lib/firebase'
-import { collection, query, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
-import CreateRoomButton from '@/components/CreateRoomButton.vue'
 import { useUserStore } from '@/lib/store'
+import CreateRoomButton from '@/components/CreateRoomButton.vue'
+import { collection, query, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
+import type { MemberType } from '@/lib/types'
 
 const rooms = ref<any>([])
 const filter = ref<'all' | 'my_rooms'>('all')
@@ -18,13 +19,13 @@ const filteredChatRooms = computed(() => {
     case 'all':
       return rooms.value
     case 'my_rooms':
-      return rooms.value.filter((room: any) => room.owner.id === store.user?.uid)
+      return rooms.value.filter((room: any) => room.admin.id === store.user?.uid)
     default:
       return rooms.value
   }
 })
 
-async function createChatRoom(name: string) {
+async function createChatRoom(name: string, members: MemberType[]) {
   try {
     isCreating.value = true
 
@@ -32,11 +33,12 @@ async function createChatRoom(name: string) {
 
     await addDoc(collection(firestore, 'chat_rooms'), {
       name: name.trim(),
-      owner: {
+      admin: {
         id: store.user?.uid,
         email: store.user?.email,
         displayName: store.user?.displayName,
       },
+      members: members || [],
       createdAt: serverTimestamp(),
     })
   } catch (error) {
@@ -85,7 +87,7 @@ onMounted(() => {
       <TransitionGroup name="room_list" tag="div" class="room_list">
         <RouterLink :to="`/${room.id}`" v-for="room in filteredChatRooms" :key="room.id">
           <h4>{{ room.name }}</h4>
-          <span>Owner: {{ room.owner.displayName ?? room.owner.email }}</span>
+          <span>Admin: {{ room.admin.displayName ?? room.admin.email }}</span>
         </RouterLink>
       </TransitionGroup>
     </div>

@@ -4,6 +4,7 @@ import { auth } from '../lib/firebase'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { useUserStore } from '@/lib/store'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue3-toastify'
 
 const email = ref<string>('')
 const password = ref<string>('')
@@ -13,14 +14,21 @@ const router = useRouter()
 const store = useUserStore()
 
 async function loginWithEmailPassword() {
-  try {
-    isLogginIn.value = true
+  toast.remove()
+  isLogginIn.value = true
 
+  try {
     const loggedUser = await signInWithEmailAndPassword(auth, email.value, password.value)
     store.setUser(loggedUser.user)
     router.push('/')
-  } catch (error) {
-    console.error('Error during login:', error)
+  } catch (error: any) {
+    console.error(error.code)
+
+    if ((error.code as string).includes('auth/invalid-credential')) {
+      toast.error('Invalid credentials. Please Try again')
+    } else {
+      toast.error('An error occurred. Please try again')
+    }
   } finally {
     isLogginIn.value = false
   }
