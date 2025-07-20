@@ -12,6 +12,7 @@ const props = defineProps<{
 
 const emits = defineEmits<{
   (event: 'toggleSlide'): void
+  (event: 'leaveRoom'): void
 }>()
 </script>
 
@@ -22,7 +23,10 @@ const emits = defineEmits<{
 
   <aside v-if="props.isSlideOpen" class="slide_container">
     <button @click="emits('toggleSlide')" class="slide_close_btn">&#10005;</button>
-    <h3>Second Room 1</h3>
+    <div>
+      <h3>Second Room 1</h3>
+      <span class="roomId">Room ID: {{ roomInfo?.id }}</span>
+    </div>
     <div class="slide_content">
       <div class="accordion">
         <button
@@ -66,7 +70,7 @@ const emits = defineEmits<{
           <img src="/chevron.png" alt="chevron-icon" />
         </button>
         <div v-if="isPrivacyAndSupportOpen" class="accordion_content">
-          <button class="logout_btn">
+          <button @click="emits('leaveRoom')" class="leave_btn">
             <img src="/log-out.png" alt="logout-icon" />
             Leave room
           </button>
@@ -77,6 +81,11 @@ const emits = defineEmits<{
 </template>
 
 <style scoped>
+.roomId {
+  font-size: 0.8rem;
+  color: var(--color-400);
+}
+
 .room_info_btn {
   background: var(--color-800);
   display: grid;
@@ -201,25 +210,25 @@ const emits = defineEmits<{
   aspect-ratio: 1;
 }
 
-.accordion_content .logout_btn {
+.accordion_content .leave_btn {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: transparent;
+  background: var(--color-700);
   color: var(--color-50);
   font-size: 0.9rem;
   font-weight: 600;
-  padding: 0.5rem 0.2rem;
+  padding: 0.5rem;
   border-radius: 0.5rem;
   transition: all 150ms ease;
 }
 
-.accordion_content .logout_btn:hover {
-  background: var(--color-700);
+.accordion_content .leave_btn:hover {
+  background: var(--color-600);
 }
 
-.accordion_content .logout_btn img {
+.accordion_content .leave_btn img {
   width: 1rem;
   aspect-ratio: 1;
 }

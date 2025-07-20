@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { watch, ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, firestore } from '../lib/firebase'
-import type { RoomType } from '@/lib/types'
+import type { MemberType, RoomType } from '@/lib/types'
 import { useUserStore } from '@/lib/store'
 import RoomInfoButton from './RoomInfoButton.vue'
 import UserButton from './UserButton.vue'
@@ -29,13 +29,13 @@ function logout() {
     })
 }
 
-async function fetchRoomName(roomId: string) {
+async function fetchRoomInfo(roomId: string) {
   try {
     const roomRef = doc(firestore, 'chat_rooms', roomId)
     const roomSnapshot = await getDoc(roomRef)
 
     if (roomSnapshot.exists()) {
-      roomInfo.value = roomSnapshot.data() as RoomType
+      roomInfo.value = { id: roomId, ...roomSnapshot.data() } as RoomType
     } else {
       roomInfo.value = null
     }
@@ -44,12 +44,45 @@ async function fetchRoomName(roomId: string) {
   }
 }
 
+async function leaveRoom() {
+  try {
+    if (!roomInfo.value || !store.user) return
+
+    const isAdmin = roomInfo?.value.admin.id === store?.user.uid
+
+    const roomRef = doc(firestore, 'chat_rooms', roomInfo?.value.id!)
+
+    if (isAdmin) {
+      // Admin leaves: you might want to delete the room or transfer ownership here
+      console.warn('Admin leaving is not yet implemented.')
+    } else {
+      const memberIndex = roomInfo.value.members.findIndex(
+        (member: MemberType) => member.id === store.user.uid,
+      )
+      if (memberIndex === -1) {
+        console.warn('Member not found.')
+        return
+      }
+      const updatedMembers = roomInfo.value.members.filter(
+        (member: MemberType) => member.id !== store.user.uid,
+      )
+      await updateDoc(roomRef, {
+        members: updatedMembers,
+      })
+
+      router.push('/')
+    }
+  } catch (error) {
+    console.error('Error leaving room:', error)
+  }
+}
+
 watch(
   () => route.params.roomId,
   (newRoomId) => {
     roomId.value = newRoomId as string | null
     if (roomId.value) {
-      fetchRoomName(roomId.value)
+      fetchRoomInfo(roomId.value)
     } else {
       roomId.value = null
       roomInfo.value = null
@@ -62,7 +95,7 @@ onMounted(() => {
   const newRoomId = route.params.roomId as string | null
   if (newRoomId && newRoomId !== roomId.value) {
     roomId.value = newRoomId
-    fetchRoomName(newRoomId)
+    fetchRoomInfo(newRoomId)
   }
 })
 </script>
@@ -88,6 +121,7 @@ onMounted(() => {
         v-if="roomInfo"
         :roomInfo
         :isSlideOpen
+        @leaveRoom="leaveRoom"
         @toggleSlide="isSlideOpen = !isSlideOpen"
       />
       <UserButton
