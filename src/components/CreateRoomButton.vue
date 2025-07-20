@@ -5,6 +5,7 @@ import { useUserStore } from '@/lib/store'
 import type { MemberType } from '@/lib/types'
 import { collection, limit, onSnapshot, query } from 'firebase/firestore'
 import { toast } from 'vue3-toastify'
+import Modal from './Modal.vue'
 
 const store = useUserStore()
 
@@ -16,6 +17,7 @@ const props = defineProps<{
   isModalOpen: boolean
   isCreating: boolean
   createChatRoom: (name: string, member: MemberType[]) => void
+  toggleModal: () => void
 }>()
 
 async function fetchUsers() {
@@ -57,22 +59,14 @@ watch(
     }
   },
 )
-
-const emits = defineEmits<{
-  (event: 'toggleModal'): void
-}>()
 </script>
 
 <template>
-  <button @click="emits('toggleModal')" class="create_btn">Create Room</button>
+  <button @click="props.toggleModal" class="create_btn">Create Room</button>
 
-  <div class="modal_container" v-if="props.isModalOpen">
-    <div class="modal_box">
-      <div class="modal_box_header">
-        <h3>Create Room</h3>
-        <button @click="emits('toggleModal')">&#10005;</button>
-      </div>
-      <form @submit.prevent="createChatRoom(roomName, members)">
+  <modal v-if="props.isModalOpen" :toggleModal title="Create Room">
+    <template #form>
+      <form class="modal_form" @submit.prevent="createChatRoom(roomName, members)">
         <div class="input_group">
           <label>Room's Name</label>
           <input v-model="roomName" type="text" />
@@ -113,8 +107,8 @@ const emits = defineEmits<{
         </div>
         <button class="submit_btn" type="submit" :disabled="isCreating">Create</button>
       </form>
-    </div>
-  </div>
+    </template>
+  </modal>
 </template>
 
 <style scoped>
@@ -130,43 +124,13 @@ const emits = defineEmits<{
   background: var(--color-300);
 }
 
-.modal_container {
-  position: fixed;
-  inset: 0;
-  background: rgb(0, 0, 0, 0.8);
-  backdrop-filter: blur(2px);
-
-  display: grid;
-  place-items: center;
-}
-
-.modal_box {
-  position: absolute;
-  background: var(--color-900);
-  padding: 1rem;
-  border-radius: 0.5rem;
-  width: 90%;
-}
-
-@media (min-width: 720px) {
-  .modal_box {
-    width: 60%;
-  }
-}
-
-@media (min-width: 1020px) {
-  .modal_box {
-    width: 30%;
-  }
-}
-
-.modal_box form {
+.modal_form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.modal_box form .submit_btn {
+.modal_form .submit_btn {
   padding: 0.5rem;
   font-weight: 600;
   border-radius: 0.5rem;
@@ -174,25 +138,8 @@ const emits = defineEmits<{
   transition: all 150ms ease;
 }
 
-.modal_box form .submit_btn:hover {
+.modal_form .submit_btn:hover {
   background: var(--color-300);
-}
-
-.modal_box_header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.modal_box_header h3 {
-  font-size: 1rem;
-}
-
-.modal_box_header button {
-  background: transparent;
-  color: var(--color-50);
-  font-size: 1.2rem;
 }
 
 .users_container .users_label {

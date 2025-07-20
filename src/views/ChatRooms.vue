@@ -79,7 +79,7 @@ onMounted(() => {
   <div class="chatroom_container">
     <div class="chatroom_header">
       <h2>Chat Rooms</h2>
-      <CreateRoomButton :isCreating :createChatRoom :isModalOpen @toggleModal="toggleModal" />
+      <CreateRoomButton :isCreating :createChatRoom :isModalOpen :toggleModal />
     </div>
     <div class="chatroom_filters">
       <button :class="{ selected: filter === 'all' }" @click="filter = 'all'">All</button>
