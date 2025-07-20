@@ -1,12 +1,17 @@
 <script setup lang="ts">
+import { watch, ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { watch, ref, onMounted, computed } from 'vue'
-import { auth, firestore } from '../lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
+import { auth, firestore } from '../lib/firebase'
+import type { RoomType } from '@/lib/types'
 import { useUserStore } from '@/lib/store'
+import RoomInfoButton from './RoomInfoButton.vue'
+import UserButton from './UserButton.vue'
 
 const roomId = ref<string | null>(null)
-const roomInfo = ref<{ name: string; email: string } | null>(null)
+const roomInfo = ref<RoomType | null>(null)
+const isPopOverOpen = ref<boolean>(false)
+const isSlideOpen = ref<boolean>(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -30,7 +35,7 @@ async function fetchRoomName(roomId: string) {
     const roomSnapshot = await getDoc(roomRef)
 
     if (roomSnapshot.exists()) {
-      roomInfo.value = { name: roomSnapshot.data()?.name, email: roomSnapshot.data()?.admin.email }
+      roomInfo.value = roomSnapshot.data() as RoomType
     } else {
       roomInfo.value = null
     }
@@ -74,23 +79,41 @@ onMounted(() => {
         <div class="horizontal_line" />
         <div class="room_info_text">
           <span>{{ roomInfo.name }}</span>
-          <small v-if="store.user.email === roomInfo.email">Owned</small>
+          <small v-if="store.user.email === roomInfo.admin.email">Owned</small>
         </div>
       </div>
     </div>
     <div class="right_container">
-      <span class="user_info" v-if="store.user">{{
-        store.user.displayName || store.user.email
-      }}</span>
-      <button class="signout_btn" @click="logout()">Logout</button>
+      <RoomInfoButton
+        v-if="roomInfo"
+        :roomInfo
+        :isSlideOpen
+        @toggleSlide="isSlideOpen = !isSlideOpen"
+      />
+      <UserButton
+        :isPopOverOpen
+        :user="!!store.user"
+        :displayName="store.user.displayName"
+        :email="store.user.email"
+        @logout="logout"
+        @togglePopOver="isPopOverOpen = !isPopOverOpen"
+      />
     </div>
   </header>
 </template>
 
 <style scoped>
+.right_container {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 header {
   position: fixed;
   top: 0;
+
+  z-index: 999;
 
   display: flex;
   align-items: center;
@@ -119,6 +142,7 @@ header {
 .room_info .room_info_text small {
   margin-top: -5px;
   font-size: 0.7rem;
+  color: var(--color-400);
 }
 
 .horizontal_line {
@@ -159,30 +183,5 @@ header {
 .logo img {
   width: 1.5rem;
   aspect-ratio: auto;
-}
-
-.right_container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.right_container .user_info {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.signout_btn {
-  padding: 0.5rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid var(--color-500);
-  color: var(--color-50);
-  background: transparent;
-  font-weight: 600;
-  transition: all 150ms ease;
-}
-
-.signout_btn:hover {
-  background: var(--color-800);
 }
 </style>

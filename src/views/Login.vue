@@ -105,7 +105,7 @@ async function loginWithEmailPassword() {
 
 @media (min-width: 1020px) {
   .login_form {
-    width: 30%;
+    width: 25%;
   }
 }
 

@@ -5,9 +5,9 @@ import { firestore } from '../lib/firebase'
 import { useUserStore } from '@/lib/store'
 import CreateRoomButton from '@/components/CreateRoomButton.vue'
 import { collection, query, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
-import type { MemberType } from '@/lib/types'
+import type { MemberType, RoomType } from '@/lib/types'
 
-const rooms = ref<any>([])
+const rooms = ref<RoomType[]>([])
 const filter = ref<'all' | 'my_rooms'>('all')
 const isModalOpen = ref<boolean>(false)
 const isCreating = ref<boolean>(false)
@@ -17,9 +17,13 @@ const store = useUserStore()
 const filteredChatRooms = computed(() => {
   switch (filter.value) {
     case 'all':
-      return rooms.value
+      return rooms.value.filter(
+        (room: RoomType) =>
+          room.admin.id === store.user.uid ||
+          room.members.find((member) => member.id === store.user.uid),
+      )
     case 'my_rooms':
-      return rooms.value.filter((room: any) => room.admin.id === store.user?.uid)
+      return rooms.value.filter((room: RoomType) => room.admin.id === store.user?.uid)
     default:
       return rooms.value
   }
@@ -55,7 +59,7 @@ function fetchRooms() {
 
   onSnapshot(q, (snapshot) => {
     if (!snapshot.empty) {
-      rooms.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+      rooms.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as RoomType)
     } else {
       console.log('No rooms found')
     }
@@ -87,7 +91,10 @@ onMounted(() => {
       <TransitionGroup name="room_list" tag="div" class="room_list">
         <RouterLink :to="`/${room.id}`" v-for="room in filteredChatRooms" :key="room.id">
           <h4>{{ room.name }}</h4>
-          <span>Admin: {{ room.admin.displayName ?? room.admin.email }}</span>
+          <span v-if="room.admin.email !== store.user.email"
+            >Admin: {{ room.admin.displayName ?? room.admin.email }}</span
+          >
+          <span v-else>Your room</span>
         </RouterLink>
       </TransitionGroup>
     </div>

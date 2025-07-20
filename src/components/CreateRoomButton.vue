@@ -4,6 +4,7 @@ import { firestore } from '@/lib/firebase'
 import { useUserStore } from '@/lib/store'
 import type { MemberType } from '@/lib/types'
 import { collection, limit, onSnapshot, query } from 'firebase/firestore'
+import { toast } from 'vue3-toastify'
 
 const store = useUserStore()
 
@@ -16,13 +17,6 @@ const props = defineProps<{
   isCreating: boolean
   createChatRoom: (name: string, member: MemberType[]) => void
 }>()
-
-// const dummy = [
-//   { id: '1', displayName: 'User 1', email: 'user1@gmail.com' },
-//   { id: '2', displayName: 'User 2', email: 'user2@gmail.com' },
-//   { id: '3', displayName: 'User 3', email: 'user3@gmail.com' },
-//   { id: '4', displayName: 'User 4', email: 'user4@gmail.com' },
-// ]
 
 async function fetchUsers() {
   const roomsRef = collection(firestore, 'users')
@@ -40,6 +34,10 @@ async function fetchUsers() {
 }
 
 function selectMember(selectedUser: MemberType) {
+  if (members.value.length === 10) {
+    return toast('Only 10 members are allowed')
+  }
+
   const memberIndex = members.value?.findIndex((member) => member.id === selectedUser.id)
 
   if (memberIndex !== -1) {
