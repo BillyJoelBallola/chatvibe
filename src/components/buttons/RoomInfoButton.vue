@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import type { MemberType, RoomType } from '@/lib/types'
-import Modal from './Modal.vue'
+import Modal from '../Modal.vue'
 import {
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   limit,
   onSnapshot,
@@ -24,11 +25,13 @@ const props = defineProps<{
 const emits = defineEmits<{
   (event: 'toggleSlide'): void
   (event: 'leaveRoom'): void
+  (event: 'deleteRoom', roomId: string): Promise<void>
 }>()
 
 const isChatMembersOpen = ref<boolean>(false)
 const isPrivacyAndSupportOpen = ref<boolean>(false)
 const isAddUserModal = ref<boolean>(false)
+const isDeleteRoomModal = ref<boolean>(false)
 const isLeaveRoomModal = ref<boolean>(false)
 const isAdding = ref<boolean>(false)
 const members = ref<MemberType[]>([])
@@ -38,6 +41,10 @@ const store = useUserStore()
 
 function toggleAddUserModal() {
   isAddUserModal.value = !isAddUserModal.value
+}
+
+function toggleDeleteRoomModal() {
+  isDeleteRoomModal.value = !isDeleteRoomModal.value
 }
 
 function toggleLeaveRoomModal() {
@@ -222,11 +229,38 @@ watch(
           <img src="/chevron.png" alt="chevron-icon" />
         </button>
         <div v-if="isPrivacyAndSupportOpen" class="accordion_content">
+          <!-- delete room modal -->
+          <button
+            v-if="props.roomInfo?.admin.id === store.user.uid"
+            @click="toggleDeleteRoomModal"
+            class="leave_btn"
+            style="margin-bottom: 0.5rem"
+          >
+            <img src="/trash.png" alt="trash-icon" />
+            Delete Room
+          </button>
+
+          <modal v-if="isDeleteRoomModal" :toggleModal="toggleDeleteRoomModal" title="Delete Room">
+            <template #form>
+              <form @submit.prevent="emits('deleteRoom', props.roomInfo?.id!)" class="modal_form">
+                <p>Are you sure you want to delete this room?</p>
+                <div class="modal_controls">
+                  <button @click="toggleDeleteRoomModal" class="cancel_btn" type="button">
+                    Cancel
+                  </button>
+                  <button style="background: #fb2c36" class="leave_btn" type="submit">
+                    Delete
+                  </button>
+                </div>
+              </form>
+            </template>
+          </modal>
+
+          <!-- leave room modal -->
           <button @click="toggleLeaveRoomModal" class="leave_btn">
             <img src="/log-out.png" alt="logout-icon" />
             Leave room
           </button>
-
           <modal v-if="isLeaveRoomModal" :toggleModal="toggleLeaveRoomModal" title="Leave Room">
             <template #form>
               <form
@@ -240,7 +274,7 @@ watch(
               >
                 <p>Are you sure you want to leave this room?</p>
                 <div class="modal_controls">
-                  <button @click="toggleLeaveRoomModal" class="cancel_btn" type="submit">
+                  <button @click="toggleLeaveRoomModal" class="cancel_btn" type="button">
                     Cancel
                   </button>
                   <button style="background: #fb2c36" class="leave_btn" type="submit">Leave</button>

@@ -3,7 +3,7 @@ import { RouterLink } from 'vue-router'
 import { computed, onMounted, ref } from 'vue'
 import { firestore } from '../lib/firebase'
 import { useUserStore } from '@/lib/store'
-import CreateRoomButton from '@/components/CreateRoomButton.vue'
+import CreateRoomButton from '@/components/buttons/CreateRoomButton.vue'
 import { collection, query, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
 import type { MemberType, RoomType } from '@/lib/types'
 

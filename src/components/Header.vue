@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { watch, ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, firestore } from '../lib/firebase'
 import type { MemberType, RoomType } from '@/lib/types'
 import { useUserStore } from '@/lib/store'
-import RoomInfoButton from './RoomInfoButton.vue'
+import RoomInfoButton from './buttons/RoomInfoButton.vue'
 import UserButton from './UserButton.vue'
+import { toast } from 'vue3-toastify'
 
 const roomId = ref<string | null>(null)
 const roomInfo = ref<RoomType | null>(null)
@@ -41,6 +42,19 @@ async function fetchRoomInfo(roomId: string) {
     }
   } catch (error) {
     console.error('Error fetching room data:', error)
+  }
+}
+
+async function deleteRoom(roomId: string) {
+  try {
+    const roomRef = doc(firestore, 'chat_rooms', roomId)
+
+    await deleteDoc(roomRef)
+
+    toast.success(`Room with name: ${roomInfo.value?.name} deleted successfully.`)
+    router.push('/')
+  } catch (error) {
+    console.error('Error deleting room:', error)
   }
 }
 
@@ -123,6 +137,7 @@ onMounted(() => {
         :roomInfo
         :isSlideOpen
         :fetchRoomInfo
+        @deleteRoom="deleteRoom"
         @leaveRoom="leaveRoom"
         @toggleSlide="isSlideOpen = !isSlideOpen"
       />

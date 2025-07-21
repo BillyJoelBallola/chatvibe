@@ -5,7 +5,7 @@ import { useUserStore } from '@/lib/store'
 import type { MemberType } from '@/lib/types'
 import { collection, limit, onSnapshot, query } from 'firebase/firestore'
 import { toast } from 'vue3-toastify'
-import Modal from './Modal.vue'
+import Modal from '../Modal.vue'
 
 const store = useUserStore()
 
