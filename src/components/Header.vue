@@ -53,7 +53,7 @@ async function leaveRoom() {
     const roomRef = doc(firestore, 'chat_rooms', roomInfo?.value.id!)
 
     if (isAdmin) {
-      // Admin leaves: you might want to delete the room or transfer ownership here
+      // TODO: Admin leaves: delete the room or transfer ownership here
       console.warn('Admin leaving is not yet implemented.')
     } else {
       const memberIndex = roomInfo.value.members.findIndex(
@@ -66,6 +66,7 @@ async function leaveRoom() {
       const updatedMembers = roomInfo.value.members.filter(
         (member: MemberType) => member.id !== store.user.uid,
       )
+
       await updateDoc(roomRef, {
         members: updatedMembers,
       })
@@ -121,6 +122,7 @@ onMounted(() => {
         v-if="roomInfo"
         :roomInfo
         :isSlideOpen
+        :fetchRoomInfo
         @leaveRoom="leaveRoom"
         @toggleSlide="isSlideOpen = !isSlideOpen"
       />

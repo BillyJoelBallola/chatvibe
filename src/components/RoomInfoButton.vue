@@ -1,30 +1,62 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import type { MemberType, RoomType } from '@/lib/types'
 import Modal from './Modal.vue'
-import { collection, limit, onSnapshot, query } from 'firebase/firestore'
+import {
+  arrayUnion,
+  collection,
+  doc,
+  limit,
+  onSnapshot,
+  query,
+  updateDoc,
+} from 'firebase/firestore'
 import { firestore } from '@/lib/firebase'
 import { toast } from 'vue3-toastify'
 import { useUserStore } from '@/lib/store'
 
+const props = defineProps<{
+  isSlideOpen: boolean
+  roomInfo: RoomType | null
+  fetchRoomInfo: (roomId: string) => Promise<void>
+}>()
+
+const emits = defineEmits<{
+  (event: 'toggleSlide'): void
+  (event: 'leaveRoom'): void
+}>()
+
 const isChatMembersOpen = ref<boolean>(false)
 const isPrivacyAndSupportOpen = ref<boolean>(false)
-const isModalOpen = ref<boolean>(false)
+const isAddUserModal = ref<boolean>(false)
+const isLeaveRoomModal = ref<boolean>(false)
 const isAdding = ref<boolean>(false)
 const members = ref<MemberType[]>([])
 const userList = ref<MemberType[]>([])
 
 const store = useUserStore()
 
+function toggleAddUserModal() {
+  isAddUserModal.value = !isAddUserModal.value
+}
+
+function toggleLeaveRoomModal() {
+  isLeaveRoomModal.value = !isLeaveRoomModal.value
+}
+
 async function fetchUsers() {
-  console.log('call')
   const roomsRef = collection(firestore, 'users')
   const q = query(roomsRef, limit(10))
 
   onSnapshot(q, (snapshot) => {
     if (!snapshot.empty) {
       userList.value = snapshot.docs
-        .filter((doc) => store.user.uid !== doc.data().id)
+        .filter((doc) => {
+          const userData = doc.data()
+          const isNotCurrentUser = store.user.uid !== userData.id
+          const isNotMember = !props.roomInfo?.members?.some((member) => member.id === userData.id)
+          return isNotCurrentUser && isNotMember
+        })
         .map((doc) => doc.data()) as MemberType[]
     } else {
       console.log('No users found')
@@ -46,29 +78,43 @@ function selectMember(selectedUser: MemberType) {
   }
 }
 
-function toggleModal() {
-  isModalOpen.value = !isModalOpen.value
+async function saveNewMembers() {
+  try {
+    isAdding.value = true
+
+    if (!props.roomInfo?.id) return
+
+    if (members.value.length <= 0) {
+      toast.error('Select a user to add.')
+      return
+    }
+
+    const roomRef = doc(firestore, 'chat_rooms', props.roomInfo?.id!)
+
+    await updateDoc(roomRef, {
+      members: arrayUnion(...members.value),
+    })
+
+    props.fetchRoomInfo(props.roomInfo?.id!)
+    toggleAddUserModal()
+
+    toast.success('User added successfully!')
+  } catch (error) {
+    console.error('Error save new members:', error)
+  } finally {
+    isAdding.value = false
+  }
 }
 
 watch(
-  () => isModalOpen.value,
+  () => isAddUserModal.value,
   () => {
-    if (isModalOpen.value) {
+    if (isAddUserModal.value) {
       members.value = []
       fetchUsers()
     }
   },
 )
-
-const props = defineProps<{
-  isSlideOpen: boolean
-  roomInfo: RoomType | null
-}>()
-
-const emits = defineEmits<{
-  (event: 'toggleSlide'): void
-  (event: 'leaveRoom'): void
-}>()
 </script>
 
 <template>
@@ -82,18 +128,17 @@ const emits = defineEmits<{
       <h3>Second Room 1</h3>
       <span class="roomId">Room ID: {{ roomInfo?.id }}</span>
     </div>
-    <div class="slide_btn_container">
+    <div v-if="props.roomInfo?.admin.id === store.user.uid" class="slide_btn_container">
       <div class="slide_btn">
-        <button @click="toggleModal">
+        <button @click="toggleAddUserModal">
           <img src="/user-plus.png" alt="add-user-icon" />
         </button>
         <span>User</span>
       </div>
 
-      <modal v-if="isModalOpen" :toggleModal title="Add Users">
+      <modal v-if="isAddUserModal" :toggleModal="toggleAddUserModal" title="Add Users">
         <template #form>
-          <!-- add members function -->
-          <form class="modal_form">
+          <form class="modal_form" @submit.prevent="saveNewMembers()">
             <div class="users_container">
               <div class="users_label">
                 <span>Users</span>
@@ -107,7 +152,7 @@ const emits = defineEmits<{
                   </div>
                 </div>
               </div>
-              <div class="users">
+              <div v-if="userList.length > 0" class="users">
                 <button
                   type="button"
                   class="user"
@@ -127,6 +172,7 @@ const emits = defineEmits<{
                   />
                 </button>
               </div>
+              <small style="color: var(--color-600)" v-else>No users found.</small>
             </div>
             <button class="save_btn" type="submit" :disabled="isAdding">Save</button>
           </form>
@@ -176,10 +222,32 @@ const emits = defineEmits<{
           <img src="/chevron.png" alt="chevron-icon" />
         </button>
         <div v-if="isPrivacyAndSupportOpen" class="accordion_content">
-          <button @click="emits('leaveRoom')" class="leave_btn">
+          <button @click="toggleLeaveRoomModal" class="leave_btn">
             <img src="/log-out.png" alt="logout-icon" />
             Leave room
           </button>
+
+          <modal v-if="isLeaveRoomModal" :toggleModal="toggleLeaveRoomModal" title="Leave Room">
+            <template #form>
+              <form
+                @submit.prevent="
+                  () => {
+                    emits('leaveRoom')
+                    emits('toggleSlide')
+                  }
+                "
+                class="modal_form"
+              >
+                <p>Are you sure you want to leave this room?</p>
+                <div class="modal_controls">
+                  <button @click="toggleLeaveRoomModal" class="cancel_btn" type="submit">
+                    Cancel
+                  </button>
+                  <button style="background: #fb2c36" class="leave_btn" type="submit">Leave</button>
+                </div>
+              </form>
+            </template>
+          </modal>
         </div>
       </div>
     </div>
@@ -375,6 +443,10 @@ const emits = defineEmits<{
 
 .modal_form .save_btn {
   margin-top: 1rem;
+}
+
+.modal_form .cancel_btn,
+.modal_form .save_btn {
   padding: 0.5rem;
   font-weight: 600;
   width: 100%;
@@ -383,6 +455,7 @@ const emits = defineEmits<{
   transition: all 150ms ease;
 }
 
+.modal_form .cancel_btn:hover,
 .modal_form .save_btn:hover {
   background: var(--color-300);
 }
@@ -427,6 +500,7 @@ const emits = defineEmits<{
   background: transparent;
   width: 100%;
   padding: 0.5rem;
+  margin-top: 0.2rem;
   border-radius: 0.5rem;
   transition: all 150ms ease;
 }
@@ -454,5 +528,21 @@ const emits = defineEmits<{
 .users_container .user .selected_user {
   width: 1.2rem;
   aspect-ratio: 1;
+}
+
+.modal_form p {
+  font-size: 0.9rem;
+}
+
+.modal_form .modal_controls {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  margin-top: 1rem;
+  gap: 0.5rem;
+}
+
+.modal_form .modal_controls button {
+  width: fit-content;
 }
 </style>
